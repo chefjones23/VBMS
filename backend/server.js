@@ -18,6 +18,18 @@ const PORT = process.env.PORT || 5000;
 async function start() {
   await database.init();
 
+  // Auto-seed demo accounts/fleet on every boot. Safe to run repeatedly —
+  // seed() checks for existing rows before inserting. This matters on
+  // Render's free tier: no Shell access, and the disk is wiped on every
+  // restart/redeploy, so this is the only reliable way to keep demo
+  // accounts available.
+  try {
+    const { seed } = require('./seed');
+    await seed();
+  } catch (err) {
+    console.error('Auto-seed failed (server will continue starting):', err);
+  }
+
   const app = express();
   const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').map(o => o.trim()).filter(Boolean);
   app.use(cors({

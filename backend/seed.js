@@ -1,13 +1,14 @@
-// Run with: node seed.js
-// Creates one demo account per role, plus a couple of fleet vehicles.
+// Run directly with: node seed.js
+// Also imported and called automatically by server.js on every boot,
+// since Render's free tier has no Shell access and wipes the disk on
+// every restart/redeploy. Every insert here already checks for an
+// existing row first, so calling this repeatedly is always safe.
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const database = require('./db/database');
 
 async function seed() {
-  const db = await database.init();
-
   const demoUsers = [
     { name: 'Arun Kumar', email: 'user@vbms.test', password: 'password123', role: 'user', department: 'Operations' },
     { name: 'Priya Raman', email: 'hod@vbms.test', password: 'password123', role: 'hod', department: 'Operations' },
@@ -47,11 +48,21 @@ async function seed() {
     console.log(`Added vehicle: ${v.vehicle_number}`);
   }
 
-  console.log('\nSeed complete. Demo logins (password: password123):');
+  console.log('Seed check complete. Demo logins (password: password123):');
   demoUsers.forEach(u => console.log(`  ${u.role.padEnd(12)} ${u.email}`));
 }
 
-seed().then(() => process.exit(0)).catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+module.exports = { seed };
+
+// Only run database.init() + exit when invoked directly via `node seed.js`.
+// When imported by server.js, database.init() has already run and the
+// process should keep running as the live server.
+if (require.main === module) {
+  database.init()
+    .then(() => seed())
+    .then(() => process.exit(0))
+    .catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
+}
